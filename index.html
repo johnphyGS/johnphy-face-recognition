@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Johnphy Face Recognition</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,sans-serif}
+#camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1)}
+.title{position:fixed;top:0;left:0;right:0;z-index:10;text-align:center;padding:20px 12px;color:#fff;background:linear-gradient(#000c,transparent)}
+.title h1{margin:0;font-size:22px}.title p{margin:6px 0;color:#ccc;font-size:13px}
+#status{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border-radius:30px;background:#000b;color:#fff;font-size:16px;font-weight:bold;white-space:nowrap}
+#start{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);z-index:20;padding:15px 30px;border:0;border-radius:30px;background:#fff;color:#000;font-size:16px;font-weight:bold}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="title"><h1>Johnphy Face Recognition</h1><p>Johnphy → Recognized | Others → Unknown</p></div>
+<video id="camera" autoplay muted playsinline></video>
+<canvas id="canvas"></canvas>
+<button id="start">Start Camera</button>
+<div id="status">Loading AI...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<script>
+const NAME="Johnphy George Sanoj";
+const MATCH_THRESHOLD=0.45;
+const MODEL_URL="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+const video=document.getElementById("camera");
+const canvas=document.getElementById("canvas");
+const status=document.getElementById("status");
+const startButton=document.getElementById("start");
+let referenceFace=null;
+let cameraRunning=false;
+
+function setStatus(t){status.textContent=t;}
+
+async function loadModels(){
+ setStatus("Loading face recognition...");
+ await Promise.all([
+  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+ ]);
+}
+
+async function loadReferenceFace(){
+ setStatus("Loading Johnphy...");
+ const image=await faceapi.fetchImage("johnphy_reference.jpg");
+ const result=await faceapi.detectSingleFace(
+  image,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})
+ ).withFaceLandmarks().withFaceDescriptor();
+ if(!result)throw new Error("No face found in reference image");
+ referenceFace=result.descriptor;
+ setStatus("Ready — Start Camera");
+}
+
+async function startCamera(){
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:{ideal:"user"},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},
+   audio:false
+  });
+  video.srcObject=stream;
+  await video.play();
+  startButton.classList.add("hidden");
+  cameraRunning=true;
+  setStatus("Scanning...");
+  scanFaces();
+ }catch(e){
+  console.error(e);
+  setStatus("Camera permission denied");
+  alert("Please allow camera access and reload the page.");
+ }
+}
+
+function drawFace(ctx,box,name,known){
+ const color=known?"#00ff66":"#ff3333";
+ ctx.strokeStyle=color;ctx.lineWidth=4;
+ ctx.strokeRect(box.x,box.y,box.width,box.height);
+ ctx.font="bold 18px Arial";
+ const pad=10,tw=ctx.measureText(name).width,h=32,y=Math.max(h,box.y);
+ ctx.fillStyle=color;ctx.fillRect(box.x,y-h,tw+pad*2,h);
+ ctx.fillStyle="#000";ctx.fillText(name,box.x+pad,y-9);
+}
+
+async function scanFaces(){
+ if(!cameraRunning)return;
+ if(video.readyState<2){requestAnimationFrame(scanFaces);return;}
+ const w=video.videoWidth,h=video.videoHeight;
+ if(!w||!h){requestAnimationFrame(scanFaces);return;}
+ canvas.width=w;canvas.height=h;
+ const detections=await faceapi.detectAllFaces(
+  video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})
+ ).withFaceLandmarks().withFaceDescriptors();
+ const results=faceapi.resizeResults(detections,{width:w,height:h});
+ const ctx=canvas.getContext("2d");
+ ctx.clearRect(0,0,w,h);
+ let johnphyDetected=false;
+ for(const face of results){
+  const distance=faceapi.euclideanDistance(referenceFace,face.descriptor);
+  const known=distance<=MATCH_THRESHOLD;
+  if(known)johnphyDetected=true;
+  drawFace(ctx,face.detection.box,known?NAME:"Unknown",known);
+ }
+ if(results.length===0)setStatus("No face detected");
+ else if(johnphyDetected)setStatus("✓ Johnphy George Sanoj");
+ else setStatus("⚠ Unknown");
+ requestAnimationFrame(scanFaces);
+}
+
+startButton.addEventListener("click",startCamera);
+
+(async()=>{
+ try{await loadModels();await loadReferenceFace();}
+ catch(e){console.error(e);setStatus("Error: check johnphy_reference.jpg");}
+})();
+</script>
+</body>
+</html>
