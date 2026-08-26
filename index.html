@@ -2,120 +2,1181 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Johnphy Face Recognition</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<title>Johnphy AI Face Recognition</title>
+
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,sans-serif}
-#camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-#canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1)}
-.title{position:fixed;top:0;left:0;right:0;z-index:10;text-align:center;padding:20px 12px;color:#fff;background:linear-gradient(#000c,transparent)}
-.title h1{margin:0;font-size:22px}.title p{margin:6px 0;color:#ccc;font-size:13px}
-#status{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border-radius:30px;background:#000b;color:#fff;font-size:16px;font-weight:bold;white-space:nowrap}
-#start{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);z-index:20;padding:15px 30px;border:0;border-radius:30px;background:#fff;color:#000;font-size:16px;font-weight:bold}
-.hidden{display:none}
+:root{
+--bg:#050914;
+--panel:rgba(10,20,38,.78);
+--line:rgba(255,255,255,.12);
+--text:#f5f7fb;
+--muted:#9ba8bb;
+--green:#37f59a;
+--red:#ff5b6e;
+--blue:#5aa7ff;
+}
+
+*{
+box-sizing:border-box;
+-webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+margin:0;
+width:100%;
+height:100%;
+overflow:hidden;
+background:var(--bg);
+color:var(--text);
+font-family:Arial,Helvetica,sans-serif;
+}
+
+#camera{
+position:fixed;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+background:#02040a;
+transform:scaleX(-1);
+}
+
+#canvas{
+position:fixed;
+inset:0;
+width:100%;
+height:100%;
+pointer-events:none;
+transform:scaleX(-1);
+}
+
+body:after{
+content:"";
+position:fixed;
+inset:0;
+pointer-events:none;
+background:
+linear-gradient(
+to bottom,
+rgba(3,7,15,.82),
+transparent 27%,
+transparent 62%,
+rgba(3,7,15,.9)
+),
+radial-gradient(
+circle at 50% 40%,
+transparent 0,
+rgba(0,0,0,.18) 58%,
+rgba(0,0,0,.55) 100%
+);
+}
+
+.topbar{
+position:fixed;
+top:0;
+left:0;
+right:0;
+z-index:20;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:18px;
+}
+
+.brand{
+display:flex;
+align-items:center;
+gap:11px;
+}
+
+.logo{
+width:42px;
+height:42px;
+display:grid;
+place-items:center;
+border-radius:14px;
+background:linear-gradient(135deg,#4d9dff,#7b61ff);
+box-shadow:0 8px 25px rgba(76,137,255,.28);
+font-size:20px;
+font-weight:900;
+}
+
+.brand h1{
+margin:0;
+font-size:17px;
+}
+
+.brand small{
+display:block;
+margin-top:2px;
+color:var(--muted);
+font-size:11px;
+}
+
+.live{
+display:flex;
+align-items:center;
+gap:7px;
+padding:8px 11px;
+border:1px solid var(--line);
+border-radius:999px;
+background:rgba(0,0,0,.32);
+backdrop-filter:blur(12px);
+font-size:11px;
+font-weight:800;
+}
+
+.dot{
+width:7px;
+height:7px;
+border-radius:50%;
+background:#777;
+}
+
+.live.on .dot{
+background:var(--green);
+box-shadow:0 0 12px var(--green);
+}
+
+.scan-area{
+position:fixed;
+z-index:10;
+left:50%;
+top:44%;
+width:min(78vw,340px);
+aspect-ratio:3/4;
+transform:translate(-50%,-50%);
+pointer-events:none;
+}
+
+.scan-area:before,
+.scan-area:after{
+content:"";
+position:absolute;
+width:34px;
+height:34px;
+border-color:rgba(255,255,255,.85);
+border-style:solid;
+}
+
+.scan-area:before{
+top:0;
+left:0;
+border-width:3px 0 0 3px;
+border-radius:10px 0 0 0;
+}
+
+.scan-area:after{
+right:0;
+bottom:0;
+border-width:0 3px 3px 0;
+border-radius:0 0 10px 0;
+}
+
+.corner{
+position:absolute;
+width:34px;
+height:34px;
+border-color:rgba(255,255,255,.85);
+border-style:solid;
+}
+
+.corner.tr{
+top:0;
+right:0;
+border-width:3px 3px 0 0;
+border-radius:0 10px 0 0;
+}
+
+.corner.bl{
+left:0;
+bottom:0;
+border-width:0 0 3px 3px;
+border-radius:0 0 0 10px;
+}
+
+.scan-line{
+position:absolute;
+left:8px;
+right:8px;
+top:10%;
+height:2px;
+background:linear-gradient(
+90deg,
+transparent,
+var(--blue),
+transparent
+);
+box-shadow:0 0 14px var(--blue);
+opacity:0;
+}
+
+.scanning .scan-line{
+opacity:1;
+animation:scan 2.1s ease-in-out infinite;
+}
+
+@keyframes scan{
+0%,100%{top:10%}
+50%{top:88%}
+}
+
+.panel{
+position:fixed;
+left:14px;
+right:14px;
+bottom:14px;
+z-index:25;
+padding:15px;
+border:1px solid var(--line);
+border-radius:24px;
+background:var(--panel);
+backdrop-filter:blur(20px);
+-webkit-backdrop-filter:blur(20px);
+box-shadow:0 18px 50px rgba(0,0,0,.38);
+}
+
+.result{
+display:flex;
+align-items:center;
+gap:12px;
+min-height:56px;
+}
+
+.result-icon{
+width:48px;
+height:48px;
+flex:0 0 48px;
+display:grid;
+place-items:center;
+border-radius:16px;
+background:rgba(255,255,255,.08);
+font-size:23px;
+}
+
+.result-title{
+margin:0;
+font-size:18px;
+font-weight:850;
+}
+
+.result-sub{
+margin:4px 0 0;
+color:var(--muted);
+font-size:12px;
+}
+
+.stats{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:9px;
+margin-top:12px;
+}
+
+.stat{
+padding:10px 12px;
+border:1px solid rgba(255,255,255,.08);
+border-radius:14px;
+background:rgba(255,255,255,.045);
+}
+
+.stat-label{
+color:var(--muted);
+font-size:10px;
+text-transform:uppercase;
+letter-spacing:.8px;
+}
+
+.stat-value{
+margin-top:3px;
+font-size:13px;
+font-weight:750;
+}
+
+.people-message{
+margin-top:10px;
+padding:11px;
+border-radius:13px;
+text-align:center;
+font-size:12px;
+font-weight:700;
+color:#cbd5e1;
+background:rgba(255,255,255,.05);
+border:1px solid rgba(255,255,255,.08);
+}
+
+.buttons{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:9px;
+margin-top:12px;
+}
+
+button{
+border:0;
+min-height:46px;
+border-radius:15px;
+color:white;
+font-weight:800;
+font-size:13px;
+cursor:pointer;
+}
+
+#start{
+background:linear-gradient(135deg,#4d9dff,#6f63ff);
+box-shadow:0 10px 25px rgba(77,125,255,.25);
+}
+
+#flip{
+background:rgba(255,255,255,.08);
+border:1px solid rgba(255,255,255,.12);
+}
+
+.hint{
+margin:10px 2px 0;
+color:#7f8da2;
+text-align:center;
+font-size:10px;
+}
+
+.known .result-icon{
+background:rgba(55,245,154,.12);
+color:var(--green);
+}
+
+.known .result-title{
+color:var(--green);
+}
+
+.unknown .result-icon{
+background:rgba(255,91,110,.12);
+color:var(--red);
+}
+
+.unknown .result-title{
+color:var(--red);
+}
+
+@media(min-width:700px){
+.panel{
+max-width:480px;
+left:50%;
+right:auto;
+width:480px;
+transform:translateX(-50%);
+}
+
+.scan-area{
+width:360px;
+}
+}
 </style>
 </head>
+
 <body>
-<div class="title"><h1>Johnphy Face Recognition</h1><p>Johnphy → Recognized | Others → Unknown</p></div>
+
 <video id="camera" autoplay muted playsinline></video>
+
 <canvas id="canvas"></canvas>
-<button id="start">Start Camera</button>
-<div id="status">Loading AI...</div>
+
+<div class="topbar">
+
+<div class="brand">
+
+<div class="logo">J</div>
+
+<div>
+<h1>Johnphy AI</h1>
+<small>Face Recognition System</small>
+</div>
+
+</div>
+
+<div class="live" id="live">
+<span class="dot"></span>
+<span id="liveText">OFFLINE</span>
+</div>
+
+</div>
+
+<div class="scan-area" id="scanArea">
+
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="scan-line"></div>
+
+</div>
+
+<div class="panel" id="panel">
+
+<div class="result">
+
+<div class="result-icon" id="resultIcon">◉</div>
+
+<div>
+
+<p class="result-title" id="resultTitle">
+System Ready
+</p>
+
+<p class="result-sub" id="resultSub">
+Press Start Camera to begin
+</p>
+
+</div>
+
+</div>
+
+<div class="stats">
+
+<div class="stat">
+
+<div class="stat-label">
+People
+</div>
+
+<div class="stat-value" id="faceCount">
+0 detected
+</div>
+
+</div>
+
+<div class="stat">
+
+<div class="stat-label">
+Unknown
+</div>
+
+<div class="stat-value" id="unknownCount">
+0 unknown
+</div>
+
+</div>
+
+</div>
+
+<div class="people-message" id="peopleMessage">
+There are 0 unknown people
+</div>
+
+<div class="buttons">
+
+<button id="start">
+Start Camera
+</button>
+
+<button id="flip">
+Flip Camera
+</button>
+
+</div>
+
+<div class="hint">
+Johnphy → green &nbsp;•&nbsp; Others → red / Unknown
+</div>
+
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
-<script>
-const NAME="Johnphy George Sanoj";
-const MATCH_THRESHOLD=0.45;
-const MODEL_URL="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
-const video=document.getElementById("camera");
-const canvas=document.getElementById("canvas");
-const status=document.getElementById("status");
-const startButton=document.getElementById("start");
-let referenceFace=null;
-let cameraRunning=false;
 
-function setStatus(t){status.textContent=t;}
+<script>
+
+const NAME = "Johnphy George Sanoj";
+
+/*
+Lower value = stricter matching.
+*/
+const MATCH_THRESHOLD = 0.45;
+
+const MODEL_URL =
+"https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
+
+const video =
+document.getElementById("camera");
+
+const canvas =
+document.getElementById("canvas");
+
+const startButton =
+document.getElementById("start");
+
+const flipButton =
+document.getElementById("flip");
+
+const resultTitle =
+document.getElementById("resultTitle");
+
+const resultSub =
+document.getElementById("resultSub");
+
+const resultIcon =
+document.getElementById("resultIcon");
+
+const faceCount =
+document.getElementById("faceCount");
+
+const unknownCount =
+document.getElementById("unknownCount");
+
+const peopleMessage =
+document.getElementById("peopleMessage");
+
+const panel =
+document.getElementById("panel");
+
+const scanArea =
+document.getElementById("scanArea");
+
+const live =
+document.getElementById("live");
+
+const liveText =
+document.getElementById("liveText");
+
+let referenceFace = null;
+let stream = null;
+let cameraRunning = false;
+let facingMode = "user";
+let scanning = false;
+let lastScanTime = 0;
+
+
+/* =========================
+   UI
+========================= */
+
+function setResult(type,title,sub,icon){
+
+panel.classList.remove(
+"known",
+"unknown"
+);
+
+if(type === "known"){
+panel.classList.add("known");
+}
+
+if(type === "unknown"){
+panel.classList.add("unknown");
+}
+
+resultTitle.textContent = title;
+resultSub.textContent = sub;
+resultIcon.textContent = icon;
+
+}
+
+
+function setLive(on){
+
+live.classList.toggle("on",on);
+
+liveText.textContent =
+on ? "LIVE" : "OFFLINE";
+
+}
+
+
+/* =========================
+   LOAD AI MODELS
+========================= */
 
 async function loadModels(){
- setStatus("Loading face recognition...");
- await Promise.all([
-  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
- ]);
+
+setResult(
+"normal",
+"Loading AI",
+"Preparing face recognition models...",
+"◌"
+);
+
+await Promise.all([
+
+faceapi.nets.tinyFaceDetector
+.loadFromUri(MODEL_URL),
+
+faceapi.nets.faceLandmark68Net
+.loadFromUri(MODEL_URL),
+
+faceapi.nets.faceRecognitionNet
+.loadFromUri(MODEL_URL)
+
+]);
+
 }
+
+
+/* =========================
+   LOAD JOHNPHY PHOTO
+========================= */
 
 async function loadReferenceFace(){
- setStatus("Loading Johnphy...");
- const image=await faceapi.fetchImage("johnphy_reference.jpg");
- const result=await faceapi.detectSingleFace(
-  image,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})
- ).withFaceLandmarks().withFaceDescriptor();
- if(!result)throw new Error("No face found in reference image");
- referenceFace=result.descriptor;
- setStatus("Ready — Start Camera");
+
+const image =
+await faceapi.fetchImage(
+"johnphy_reference.jpg"
+);
+
+const result =
+await faceapi
+.detectSingleFace(
+image,
+new faceapi.TinyFaceDetectorOptions({
+inputSize:224,
+scoreThreshold:0.5
+})
+)
+.withFaceLandmarks()
+.withFaceDescriptor();
+
+if(!result){
+
+throw new Error(
+"No face found in johnphy_reference.jpg"
+);
+
 }
 
-async function startCamera(){
- try{
-  const stream=await navigator.mediaDevices.getUserMedia({
-   video:{facingMode:{ideal:"user"},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},
-   audio:false
-  });
-  video.srcObject=stream;
-  await video.play();
-  startButton.classList.add("hidden");
-  cameraRunning=true;
-  setStatus("Scanning...");
-  scanFaces();
- }catch(e){
-  console.error(e);
-  setStatus("Camera permission denied");
-  alert("Please allow camera access and reload the page.");
- }
+referenceFace =
+result.descriptor;
+
+setResult(
+"normal",
+"System Ready",
+"Johnphy reference face loaded",
+"✓"
+);
+
 }
 
-function drawFace(ctx,box,name,known){
- const color=known?"#00ff66":"#ff3333";
- ctx.strokeStyle=color;ctx.lineWidth=4;
- ctx.strokeRect(box.x,box.y,box.width,box.height);
- ctx.font="bold 18px Arial";
- const pad=10,tw=ctx.measureText(name).width,h=32,y=Math.max(h,box.y);
- ctx.fillStyle=color;ctx.fillRect(box.x,y-h,tw+pad*2,h);
- ctx.fillStyle="#000";ctx.fillText(name,box.x+pad,y-9);
+
+/* =========================
+   CAMERA
+========================= */
+
+async function openCamera(){
+
+if(stream){
+
+stream.getTracks().forEach(
+track => track.stop()
+);
+
 }
+
+stream =
+await navigator.mediaDevices.getUserMedia({
+
+video:{
+facingMode:{
+ideal:facingMode
+},
+
+width:{
+ideal:1280
+},
+
+height:{
+ideal:720
+},
+
+frameRate:{
+ideal:30
+}
+},
+
+audio:false
+
+});
+
+video.srcObject = stream;
+
+await video.play();
+
+cameraRunning = true;
+
+setLive(true);
+
+scanArea.classList.add(
+"scanning"
+);
+
+startButton.textContent =
+"Stop Camera";
+
+scanFaces();
+
+}
+
+
+async function startOrStop(){
+
+if(cameraRunning){
+
+stopCamera();
+
+return;
+
+}
+
+try{
+
+await openCamera();
+
+}
+
+catch(error){
+
+console.error(error);
+
+setLive(false);
+
+setResult(
+"unknown",
+"Camera unavailable",
+"Allow camera permission and try again",
+"!"
+);
+
+}
+
+}
+
+
+function stopCamera(){
+
+cameraRunning = false;
+scanning = false;
+
+if(stream){
+
+stream.getTracks().forEach(
+track => track.stop()
+);
+
+stream = null;
+
+}
+
+video.srcObject = null;
+
+const ctx =
+canvas.getContext("2d");
+
+ctx.clearRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+startButton.textContent =
+"Start Camera";
+
+setLive(false);
+
+scanArea.classList.remove(
+"scanning"
+);
+
+faceCount.textContent =
+"0 detected";
+
+unknownCount.textContent =
+"0 unknown";
+
+peopleMessage.textContent =
+"There are 0 unknown people";
+
+setResult(
+"normal",
+"System Ready",
+"Press Start Camera to begin",
+"◉"
+);
+
+}
+
+
+/* =========================
+   FLIP CAMERA
+========================= */
+
+async function flipCamera(){
+
+if(!cameraRunning){
+return;
+}
+
+facingMode =
+facingMode === "user"
+? "environment"
+: "user";
+
+try{
+
+await openCamera();
+
+}
+catch(error){
+
+console.error(error);
+
+}
+
+}
+
+
+/* =========================
+   DRAW FACE BOX
+========================= */
+
+function drawFace(
+ctx,
+box,
+name,
+known
+){
+
+const color =
+known
+? "#37f59a"
+: "#ff5b6e";
+
+ctx.strokeStyle = color;
+ctx.lineWidth = 4;
+
+ctx.strokeRect(
+box.x,
+box.y,
+box.width,
+box.height
+);
+
+ctx.font =
+"bold 18px Arial";
+
+const padding = 10;
+
+const textWidth =
+ctx.measureText(name).width;
+
+const labelHeight = 34;
+
+const labelY =
+Math.max(
+labelHeight,
+box.y
+);
+
+ctx.fillStyle = color;
+
+ctx.fillRect(
+box.x,
+labelY-labelHeight,
+textWidth+padding*2,
+labelHeight
+);
+
+ctx.fillStyle =
+"#06100b";
+
+ctx.fillText(
+name,
+box.x+padding,
+labelY-10
+);
+
+}
+
+
+/* =========================
+   FACE RECOGNITION
+========================= */
 
 async function scanFaces(){
- if(!cameraRunning)return;
- if(video.readyState<2){requestAnimationFrame(scanFaces);return;}
- const w=video.videoWidth,h=video.videoHeight;
- if(!w||!h){requestAnimationFrame(scanFaces);return;}
- canvas.width=w;canvas.height=h;
- const detections=await faceapi.detectAllFaces(
-  video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})
- ).withFaceLandmarks().withFaceDescriptors();
- const results=faceapi.resizeResults(detections,{width:w,height:h});
- const ctx=canvas.getContext("2d");
- ctx.clearRect(0,0,w,h);
- let johnphyDetected=false;
- for(const face of results){
-  const distance=faceapi.euclideanDistance(referenceFace,face.descriptor);
-  const known=distance<=MATCH_THRESHOLD;
-  if(known)johnphyDetected=true;
-  drawFace(ctx,face.detection.box,known?NAME:"Unknown",known);
- }
- if(results.length===0)setStatus("No face detected");
- else if(johnphyDetected)setStatus("✓ Johnphy George Sanoj");
- else setStatus("⚠ Unknown");
- requestAnimationFrame(scanFaces);
+
+if(
+!cameraRunning ||
+scanning
+){
+
+if(cameraRunning){
+requestAnimationFrame(
+scanFaces
+);
 }
 
-startButton.addEventListener("click",startCamera);
+return;
 
-(async()=>{
- try{await loadModels();await loadReferenceFace();}
- catch(e){console.error(e);setStatus("Error: check johnphy_reference.jpg");}
+}
+
+const now =
+performance.now();
+
+if(
+now-lastScanTime < 180
+){
+
+requestAnimationFrame(
+scanFaces
+);
+
+return;
+
+}
+
+lastScanTime = now;
+
+scanning = true;
+
+try{
+
+if(
+video.readyState < 2 ||
+video.videoWidth === 0
+){
+
+return;
+
+}
+
+const width =
+video.videoWidth;
+
+const height =
+video.videoHeight;
+
+canvas.width = width;
+canvas.height = height;
+
+const detections =
+await faceapi
+.detectAllFaces(
+video,
+new faceapi.TinyFaceDetectorOptions({
+inputSize:224,
+scoreThreshold:0.5
+})
+)
+.withFaceLandmarks()
+.withFaceDescriptors();
+
+const results =
+faceapi.resizeResults(
+detections,
+{
+width:width,
+height:height
+}
+);
+
+const ctx =
+canvas.getContext("2d");
+
+ctx.clearRect(
+0,
+0,
+width,
+height
+);
+
+const totalPeople =
+results.length;
+
+let johnphyFound = false;
+
+let unknownPeople = 0;
+
+
+/* =========================
+   CHECK EACH PERSON
+========================= */
+
+for(
+const face of results
+){
+
+const distance =
+faceapi.euclideanDistance(
+referenceFace,
+face.descriptor
+);
+
+const isJohnphy =
+distance <= MATCH_THRESHOLD;
+
+if(isJohnphy){
+
+johnphyFound = true;
+
+}
+else{
+
+unknownPeople++;
+
+}
+
+
+/*
+GREEN = JOHNPHY
+RED = UNKNOWN
+*/
+
+drawFace(
+ctx,
+face.detection.box,
+isJohnphy
+? "Johnphy"
+: "Unknown",
+isJohnphy
+);
+
+}
+
+
+/* =========================
+   COUNTERS
+========================= */
+
+faceCount.textContent =
+`${totalPeople} detected`;
+
+unknownCount.textContent =
+`${unknownPeople} unknown`;
+
+
+/* =========================
+   UNKNOWN MESSAGE
+========================= */
+
+peopleMessage.textContent =
+`There are ${unknownPeople} unknown ${
+unknownPeople === 1
+? "person"
+: "people"
+}`;
+
+
+/* =========================
+   MAIN RESULT
+========================= */
+
+if(totalPeople === 0){
+
+setResult(
+"normal",
+"No Face Detected",
+"Position your face inside the frame",
+"⌾"
+);
+
+}
+
+else if(johnphyFound){
+
+setResult(
+"known",
+"Johnphy",
+unknownPeople > 0
+? `${unknownPeople} unknown ${
+unknownPeople === 1
+? "person"
+: "people"
+} detected`
+: "Face matched successfully",
+"✓"
+);
+
+}
+
+else{
+
+setResult(
+"unknown",
+"Unknown",
+`${unknownPeople} ${
+unknownPeople === 1
+? "person"
+: "people"
+} detected`,
+"!"
+);
+
+}
+
+}
+
+catch(error){
+
+console.error(error);
+
+}
+
+finally{
+
+scanning = false;
+
+if(cameraRunning){
+
+requestAnimationFrame(
+scanFaces
+);
+
+}
+
+}
+
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+startButton.addEventListener(
+"click",
+startOrStop
+);
+
+flipButton.addEventListener(
+"click",
+flipCamera
+);
+
+
+/* =========================
+   INITIALIZE
+========================= */
+
+(async function(){
+
+try{
+
+await loadModels();
+
+await loadReferenceFace();
+
+}
+
+catch(error){
+
+console.error(error);
+
+setResult(
+"unknown",
+"Setup Error",
+"Make sure johnphy_reference.jpg is uploaded",
+"!"
+);
+
+}
+
 })();
+
 </script>
+
 </body>
 </html>
